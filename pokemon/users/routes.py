@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from pokemon.extensions import db, bcrypt
 from pokemon.models import User
@@ -88,3 +87,31 @@ def profile():
   return render_template('users/profile.html', 
                          title='Profile Page',
                          user=user)
+
+@users_bp.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+  if request.method == 'POST':
+    old_password = request.form.get('old_password')
+    new_password = request.form.get('new_password')
+    confirm_new_password = request.form.get('confirm_new_password')
+
+    user = current_user
+
+    if not bcrypt.check_password_hash(user.password, old_password):
+      flash('Old password is not correct!', 'warning')
+      return redirect(url_for('users.change_password'))
+    
+    if new_password != confirm_new_password:
+      flash('New password and confirm password do not match!', 'warning')
+      return redirect(url_for('users.change_password'))
+    
+    pwd_hash = bcrypt.generate_password_hash(password=new_password).decode('utf-8')
+    user.password = pwd_hash
+    db.session.add(user)
+    db.session.commit()
+    
+    flash('Change password successful!', 'success')
+    return redirect(url_for('users.profile'))
+
+  return render_template('users/change_password.html', title='Change Password Page')
